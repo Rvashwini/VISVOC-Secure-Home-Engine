@@ -1,0 +1,321 @@
+#include<LiquidCrystal.h>
+const int rs=2,en=3,d4=4,d5=5,d6=6,d7=7;
+LiquidCrystal lcd(rs,en,d4,d5,d6,d7);
+
+#include<String.h>
+char ch;
+String readvoice;
+
+
+#include<dht.h>  
+#define dht_dpin 14
+
+int Fire=15;
+int Buzzer=8;
+
+dht DHT;
+
+char Serial_read(void);
+
+int RELAY1=16;
+int RELAY2=17;
+int RELAY3=18;
+int RELAY4=19;
+
+float tempc,Humidity;
+
+void setup()
+{
+
+    pinMode(Fire,INPUT);
+    pinMode(RELAY1, OUTPUT);
+    pinMode(RELAY2, OUTPUT);
+    pinMode(RELAY3, OUTPUT);
+    pinMode(RELAY4, OUTPUT);
+     pinMode(Buzzer, OUTPUT);
+
+digitalWrite(Buzzer,LOW);
+    digitalWrite(RELAY1,LOW);
+    digitalWrite(RELAY2,LOW);
+     digitalWrite(RELAY3,LOW);
+    digitalWrite(RELAY4,LOW);
+ Serial1.begin(9600);
+    Serial.begin(9600);
+    lcd.begin(16,2);  
+    lcd.clear();
+    lcd.print("  Voice Based");
+    lcd.setCursor(0,1);
+    lcd.print("Home Automation");
+    delay(2000);
+ 
+}
+ 
+void loop()
+{
+  if(Serial.available()>0)
+  {
+    char ch=Serial.read();
+    Serial.println("Received:"+String(ch));
+    delay(100);
+    if(ch=='A')
+    {
+      lcd.clear();
+      lcd.print("Known Person");
+      delay(1000);
+       START();
+    }
+    else if(ch=='U')
+    {
+      lcd.clear();
+      lcd.print("Unknown Person");
+      delay(1000);
+
+    }
+  }
+ 
+}
+
+void START()
+{
+  lcd.clear();
+  lcd.print("Waiting For");
+  lcd.setCursor(0,1);
+  lcd.print("Commnads...");
+   while(1)
+   {
+     Voice_Mode();
+   }
+
+}
+
+
+char Serial_read(void)
+{
+      char ch;
+      while(Serial.available() == 0);
+      ch = Serial.read(); 
+      return ch;
+}
+void Voice_Mode()
+{
+  Serial.println("VOICE MODE SELECTED.");
+  while(1)
+  {
+    while (Serial1.available())
+    {  //Check if there is an available byte to read
+      delay(10); //Delay added to make thing stable 
+      char c = Serial1.read(); //Conduct a serial read
+      readvoice += c; //build the string- "forward", "reverse", "left" and "right" 
+    }
+     Serial.println(readvoice);
+    if (readvoice.length() > 0) 
+    {
+      Serial.begin(9600);
+  
+      if((readvoice == "Light on")||(readvoice == "light on")) 
+      {
+        
+        Serial.println("$Light ON#");
+        Serial1.println("$Light ON#");
+        lcd.clear();
+        lcd.print("Light ON...");
+        digitalWrite(RELAY1,HIGH);
+        delay(1000);
+      
+      } 
+      
+      else if((readvoice == "Light off")||(readvoice == "light off")) 
+      {
+          Serial.println("$Light Off#");
+          Serial1.println("$Light Off#");
+        lcd.clear();
+        lcd.print("Light Off...");
+        digitalWrite(RELAY1,LOW);
+        delay(1000);
+         
+      }
+     else if((readvoice == "Fan on")||(readvoice == "fan on")||(readvoice == "turn on") )  
+      {
+        
+        Serial.println("$Fan On#");
+        Serial1.println("$Fan On#");
+        lcd.clear();
+        lcd.print("Fan On...");
+        digitalWrite(RELAY2,HIGH);
+        delay(1000);
+      
+      } 
+      
+      else if((readvoice == "Fan off")|| (readvoice == "fan off")|| (readvoice == "fan of")||(readvoice == "turn off"))
+      {
+        
+        Serial.println("$Fan Off#");
+         Serial1.println("$Fan Off#");
+        lcd.clear();
+        lcd.print("Fan Off...");
+        digitalWrite(RELAY2,LOW);
+        delay(1000);
+         
+      }
+      else if(readvoice == "green on") 
+      {
+       
+        Serial.println("$GREEN ON#");
+        Serial1.println("$GREEN ON#");
+        lcd.clear();
+        lcd.print("GREEN ON...");
+        digitalWrite(RELAY3,HIGH);
+        delay(1000);
+      
+      } 
+      
+      else if((readvoice == "green off")|| (readvoice == "green of"))
+      {
+        
+        Serial.println("$GREEN OFF#");
+        Serial1.println("$GREEN OFF#");
+        lcd.clear();
+        lcd.print("GREEN OFF...");
+        digitalWrite(RELAY3,LOW);
+        delay(1000);
+         
+      }
+      else if((readvoice == "Red on")|| (readvoice == "red on"))
+      {
+        
+        Serial.println("$Red On#");
+        Serial1.println("$Red On#");
+        lcd.clear();
+        lcd.print("Red On...");
+        digitalWrite(RELAY4,HIGH);
+        delay(1000);
+         
+      }
+      else if((readvoice == "Red off")|| (readvoice == "red off"))
+      {
+       
+        Serial.println("$Red Off#");
+        Serial1.println("$Red Off#");
+        lcd.clear();
+        lcd.print("Red Off...");
+        digitalWrite(RELAY4,LOW);
+        delay(1000);
+         
+      }
+       
+  
+    
+   
+  }
+ readvoice="";
+  Fire_Check();
+  Gas_Check();
+  ADXL_Check();
+  Sound_Check();
+  Humidity_Check();
+  } 
+
+}
+void Fire_Check()
+{
+  if(digitalRead(Fire)==LOW)
+  {
+    lcd.clear();
+    lcd.print("Fire Detected");
+    Serial.println("$Fire Detected#");
+    Serial1.println("$Fire Detected#");
+    digitalWrite(RELAY1,LOW);
+    digitalWrite(RELAY2,LOW);
+    digitalWrite(RELAY3,LOW);
+    digitalWrite(RELAY4,LOW);
+    digitalWrite(Buzzer,HIGH);
+    delay(2000);
+    digitalWrite(Buzzer,LOW);
+  }
+  
+}
+void Humidity_Check(void)
+{
+     DHT.read11(dht_dpin);
+      Humidity=DHT.humidity;
+      tempc=DHT.temperature;
+      Serial.print("$Humidity: ");
+      Serial.print(DHT.humidity);   // printing Humidity on LCD
+      Serial.print(" %");
+      Serial.print(" # ");
+  
+      Serial.print("$Temperature:");
+      Serial.print(DHT.temperature);   // Printing temperature on LCD
+      Serial.print(" C");
+      Serial.println(" # ");
+
+      lcd.clear();
+      lcd.print("Humidity:"+String(DHT.humidity));
+      lcd.setCursor(0,1);
+      lcd.print("Temp:"+String(DHT.temperature));
+      
+      delay(1000);
+
+ }
+void Gas_Check()
+{
+    int G_val=analogRead(26);
+    Serial.println("Gas:"+String(G_val));
+    lcd.clear();
+    lcd.print("Gas:"+String(G_val));
+    delay(1000);
+    if(G_val>450)
+    {
+      Serial.println("$Gas Detected#");
+      Serial1.println("$Gas Detected#");
+      lcd.clear();
+      lcd.print("Gas Detected");
+      digitalWrite(RELAY1,LOW);
+      digitalWrite(RELAY2,LOW);
+      digitalWrite(RELAY3,LOW);
+      digitalWrite(RELAY4,LOW);
+      delay(1000);
+    }
+
+}
+void ADXL_Check()
+{
+    int X_val=analogRead(27);
+    Serial.println("X:"+String(X_val));
+    lcd.clear();
+    lcd.print("X:"+String(X_val));
+    delay(1000);
+    if((X_val>550)||(X_val<450))
+    {
+      Serial.println("$Building Inclined#");
+      Serial1.println("$Building Inclined#");
+      lcd.clear();
+      lcd.print("Building");
+      lcd.setCursor(0,1);
+      lcd.print("Inclined");
+   
+      delay(1000);
+    }
+
+}
+void Sound_Check()
+{
+    int S_val=analogRead(28);
+    S_val=1024-S_val;
+    Serial.println("Sound:"+String(S_val));
+    lcd.clear();
+    lcd.print("Sound:"+String(S_val));
+    delay(1000);
+    if(S_val<220)
+    {
+      Serial.println("$Screaming Detected#");
+      Serial1.println("$Screaming Detected#");
+      lcd.clear();
+      lcd.print("Screaming ");
+      lcd.setCursor(0,1);
+      lcd.print("Detected");
+   
+      delay(1000);
+    }
+
+}
